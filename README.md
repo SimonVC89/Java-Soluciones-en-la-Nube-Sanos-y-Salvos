@@ -126,3 +126,5 @@ sanos-y-salvos-microservicios/
 - Spring Data JPA / Hibernate
 - PostgreSQL
 - Maven
+
+Proyecto finalizado y listo para revisión.
