@@ -1,0 +1,60 @@
+package cl.sanosysalvos.notificaciones.model;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "notificaciones")
+public class Notificacion {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "usuario_id", nullable = false)
+    private Long usuarioId;
+
+    @Column(nullable = false)
+    private String mensaje;
+
+    // EMAIL, PUSH, SMS
+    private String tipo;
+
+    @Column(name = "fecha_envio")
+    private LocalDateTime fechaEnvio;
+
+    private Boolean leida;
+
+    @Column(name = "reporte_id")
+    private Long reporteId;
+
+    public Notificacion() {}
+
+    @PrePersist
+    protected void onCreate() {
+        this.fechaEnvio = LocalDateTime.now();
+        this.leida = false;
+    }
+
+    // Getters y Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public Long getUsuarioId() { return usuarioId; }
+    public void setUsuarioId(Long usuarioId) { this.usuarioId = usuarioId; }
+
+    public String getMensaje() { return mensaje; }
+    public void setMensaje(String mensaje) { this.mensaje = mensaje; }
+
+    public String getTipo() { return tipo; }
+    public void setTipo(String tipo) { this.tipo = tipo; }
+
+    public LocalDateTime getFechaEnvio() { return fechaEnvio; }
+    public void setFechaEnvio(LocalDateTime fechaEnvio) { this.fechaEnvio = fechaEnvio; }
+
+    public Boolean getLeida() { return leida; }
+    public void setLeida(Boolean leida) { this.leida = leida; }
+
+    public Long getReporteId() { return reporteId; }
+    public void setReporteId(Long reporteId) { this.reporteId = reporteId; }
+}
