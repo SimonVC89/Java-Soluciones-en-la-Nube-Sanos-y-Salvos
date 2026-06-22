@@ -46,6 +46,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- AWS SDK v2 para enviar mensajes a SQS -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sqs</artifactId>
+            <version>2.25.60</version>
+        </dependency>
     </dependencies>
 
     <build>
