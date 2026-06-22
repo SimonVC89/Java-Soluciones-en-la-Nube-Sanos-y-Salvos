@@ -149,6 +149,7 @@ jobs:
             --requires-compatibilities FARGATE \
             --cpu 256 \
             --memory 512 \
+            --execution-role-arn arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/LabRole \
             --container-definitions '[
               {
                 "name": "ms-usuarios",
