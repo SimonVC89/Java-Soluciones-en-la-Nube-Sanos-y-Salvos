@@ -5,6 +5,7 @@ import cl.sanosysalvos.reportes.repository.ReporteRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,16 +40,16 @@ public class ReporteService {
     public Reporte save(Reporte reporte) {
         Reporte guardado = reporteRepository.save(reporte);
         try {
-            String mensaje = objectMapper.writeValueAsString(Map.of(
-                "reporteId",     guardado.getId(),
-                "tipoReporte",   guardado.getTipo(),
-                "nombreMascota", guardado.getMascota() != null ? guardado.getMascota().getNombre() : "Desconocida",
-                "usuarioId",     guardado.getUsuarioId() != null ? guardado.getUsuarioId() : 1,
-                "descripcion",   guardado.getDescripcion() != null ? guardado.getDescripcion() : ""
-            ));
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("reporteId",     guardado.getId() != null ? guardado.getId() : 0L);
+            payload.put("tipoReporte",   guardado.getTipo() != null ? guardado.getTipo() : "DESCONOCIDO");
+            payload.put("nombreMascota", guardado.getMascota() != null ? guardado.getMascota().getNombre() : "Desconocida");
+            payload.put("usuarioId",     guardado.getUsuarioId() != null ? guardado.getUsuarioId() : 1L);
+            payload.put("descripcion",   guardado.getDescripcion() != null ? guardado.getDescripcion() : "");
+            String mensaje = objectMapper.writeValueAsString(payload);
             sqsService.enviarMensaje(mensaje);
         } catch (Exception e) {
-            System.out.println("[SQS] Error al serializar mensaje: " + e.getMessage());
+            System.out.println("[SQS] Error al enviar mensaje SQS: " + e.getClass().getSimpleName() + " - " + e.getMessage());
         }
         return guardado;
     }
