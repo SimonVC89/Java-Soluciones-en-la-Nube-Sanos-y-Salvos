@@ -1,0 +1,168 @@
+name: CI/CD Pipeline - Sanos y Salvos
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_BASE: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+
+jobs:
+
+  # ─────────────────────────────────────────────
+  # ETAPA 1: Compilar y testear los microservicios
+  # ─────────────────────────────────────────────
+  build-and-test:
+    name: Build y Test - ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - ms-usuarios
+          - ms-reportes
+          - ms-matching
+          - ms-geolocalizacion
+          - ms-notificaciones
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Compilar y testear ${{ matrix.service }}
+        run: |
+          cd ${{ matrix.service }}
+          mvn clean package -q
+
+  # ─────────────────────────────────────────────
+  # ETAPA 2: Provisionar servicios en AWS (IE5)
+  # ─────────────────────────────────────────────
+  provision:
+    name: Provisionar servicios AWS
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Crear repositorios ECR
+        run: |
+          for SERVICE in ms-usuarios ms-reportes ms-matching ms-geolocalizacion ms-notificaciones; do
+            aws ecr describe-repositories --repository-names sanosysalvos/$SERVICE 2>/dev/null || \
+            aws ecr create-repository \
+              --repository-name sanosysalvos/$SERVICE \
+              --image-scanning-configuration scanOnPush=true
+            echo "Repositorio ECR listo: sanosysalvos/$SERVICE"
+          done
+
+      - name: Crear cola SQS para notificaciones
+        run: |
+          QUEUE_EXISTS=$(aws sqs get-queue-url --queue-name sanosysalvos-notificaciones 2>/dev/null || echo "NO")
+          if [ "$QUEUE_EXISTS" = "NO" ]; then
+            aws sqs create-queue \
+              --queue-name sanosysalvos-notificaciones \
+              --attributes VisibilityTimeout=30,MessageRetentionPeriod=86400
+            echo "Cola SQS creada: sanosysalvos-notificaciones"
+          else
+            echo "Cola SQS ya existe"
+          fi
+
+      - name: Crear cluster ECS
+        run: |
+          aws ecs describe-clusters --clusters sanosysalvos-cluster \
+            --query 'clusters[0].status' --output text 2>/dev/null | grep -q ACTIVE || \
+          aws ecs create-cluster --cluster-name sanosysalvos-cluster
+          echo "Cluster ECS listo: sanosysalvos-cluster"
+
+  # ─────────────────────────────────────────────
+  # ETAPA 3: Construir y subir imágenes a ECR
+  # ─────────────────────────────────────────────
+  build-and-push:
+    name: Build y Push imagen - ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: provision
+    strategy:
+      matrix:
+        service:
+          - ms-usuarios
+          - ms-reportes
+          - ms-matching
+          - ms-geolocalizacion
+          - ms-notificaciones
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login a Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Construir y subir imagen Docker
+        run: |
+          IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/sanosysalvos/${{ matrix.service }}:latest
+          docker build -t $IMAGE_URI ./${{ matrix.service }}
+          docker push $IMAGE_URI
+          echo "Imagen publicada: $IMAGE_URI"
+
+  # ─────────────────────────────────────────────
+  # ETAPA 4: Desplegar ms-usuarios en ECS (IE6)
+  # ─────────────────────────────────────────────
+  deploy:
+    name: Desplegar en AWS ECS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Registrar task definition en ECS
+        run: |
+          aws ecs register-task-definition \
+            --family sanosysalvos-ms-usuarios \
+            --network-mode awsvpc \
+            --requires-compatibilities FARGATE \
+            --cpu 256 \
+            --memory 512 \
+            --container-definitions '[
+              {
+                "name": "ms-usuarios",
+                "image": "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/sanosysalvos/ms-usuarios:latest",
+                "portMappings": [{"containerPort": 8081, "protocol": "tcp"}],
+                "essential": true
+              }
+            ]'
+          echo "Task definition registrada en ECS"
+
+      - name: Verificar imagen disponible en ECR
+        run: |
+          aws ecr describe-images \
+            --repository-name sanosysalvos/ms-usuarios \
+            --query 'imageDetails[0].imagePushedAt' \
+            --output text
+          echo "Microservicio ms-usuarios disponible en ECR"
