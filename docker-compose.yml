@@ -1,0 +1,119 @@
+version: '3.8'
+
+networks:
+  sanosysalvos-network:
+    driver: overlay
+
+volumes:
+  data-usuarios:
+  data-reportes:
+  data-matching:
+  data-geolocalizacion:
+  data-notificaciones:
+
+services:
+
+  ms-usuarios:
+    image: sanosysalvos/ms-usuarios:latest
+    build:
+      context: ./ms-usuarios
+    ports:
+      - "8081:8081"
+    volumes:
+      - data-usuarios:/app/data
+    networks:
+      - sanosysalvos-network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+
+  ms-reportes:
+    image: sanosysalvos/ms-reportes:latest
+    build:
+      context: ./ms-reportes
+    ports:
+      - "8082:8082"
+    volumes:
+      - data-reportes:/app/data
+    networks:
+      - sanosysalvos-network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+
+  ms-matching:
+    image: sanosysalvos/ms-matching:latest
+    build:
+      context: ./ms-matching
+    ports:
+      - "8083:8083"
+    volumes:
+      - data-matching:/app/data
+    networks:
+      - sanosysalvos-network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+
+  ms-geolocalizacion:
+    image: sanosysalvos/ms-geolocalizacion:latest
+    build:
+      context: ./ms-geolocalizacion
+    ports:
+      - "8084:8084"
+    volumes:
+      - data-geolocalizacion:/app/data
+    networks:
+      - sanosysalvos-network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+
+  ms-notificaciones:
+    image: sanosysalvos/ms-notificaciones:latest
+    build:
+      context: ./ms-notificaciones
+    ports:
+      - "8085:8085"
+    volumes:
+      - data-notificaciones:/app/data
+    networks:
+      - sanosysalvos-network
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
