@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sanos y Salvos</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      color: #2d3748;
+    }
+
+    header {
+      background: #2b6cb0;
+      color: white;
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    header h1 { font-size: 1.4rem; }
+    header span { font-size: 0.85rem; opacity: 0.8; }
+
+    .container {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: #2b6cb0;
+      border-bottom: 2px solid #ebf4ff;
+      padding-bottom: 0.5rem;
+    }
+
+    .full-width { grid-column: 1 / -1; }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+      color: #4a5568;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      margin-bottom: 0.9rem;
+      background: #f7fafc;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #2b6cb0;
+      background: white;
+    }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+    button {
+      width: 100%;
+      padding: 0.65rem;
+      background: #2b6cb0;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #2c5282; }
+    button:disabled { background: #a0aec0; cursor: not-allowed; }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-perdido  { background: #fed7d7; color: #c53030; }
+    .badge-encontrado { background: #c6f6d5; color: #276749; }
+    .badge-activo   { background: #bee3f8; color: #2a69ac; }
+    .badge-no-leida { background: #fefcbf; color: #744210; }
+    .badge-leida    { background: #e2e8f0; color: #718096; }
+
+    .lista { list-style: none; max-height: 320px; overflow-y: auto; }
+
+    .lista li {
+      padding: 0.75rem;
+      border-bottom: 1px solid #f0f4f8;
+      font-size: 0.88rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .lista li:last-child { border-bottom: none; }
+
+    .lista-meta {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .lista-desc { color: #718096; font-size: 0.82rem; }
+
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: #276749;
+      color: white;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .toast.show { opacity: 1; }
+    .toast.error { background: #c53030; }
+
+    .refresh-info {
+      font-size: 0.75rem;
+      color: #a0aec0;
+      text-align: right;
+      margin-bottom: 0.5rem;
+    }
+
+    .empty { color: #a0aec0; font-size: 0.85rem; text-align: center; padding: 1rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🐾 Sanos y Salvos</h1>
+    <span>Plataforma de localización y recuperación de mascotas perdidas</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- FORMULARIO: Crear reporte -->
+  <div class="card">
+    <h2>Reportar mascota</h2>
+
+    <label>Tipo de reporte</label>
+    <select id="tipo">
+      <option value="PERDIDO">Perdida</option>
+      <option value="ENCONTRADO">Encontrada</option>
+    </select>
+
+    <label>Nombre de la mascota</label>
+    <input id="nombreMascota" type="text" placeholder="Ej: Firulais">
+
+    <div class="form-row">
+      <div>
+        <label>Especie</label>
+        <select id="especie">
+          <option value="PERRO">Perro</option>
+          <option value="GATO">Gato</option>
+          <option value="OTRO">Otro</option>
+        </select>
+      </div>
+      <div>
+        <label>Tamaño</label>
+        <select id="tamano">
+          <option value="PEQUEÑO">Pequeño</option>
+          <option value="MEDIANO">Mediano</option>
+          <option value="GRANDE">Grande</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label>Color</label>
+        <input id="color" type="text" placeholder="Ej: Negro con blanco">
+      </div>
+      <div>
+        <label>Raza</label>
+        <input id="raza" type="text" placeholder="Ej: Labrador">
+      </div>
+    </div>
+
+    <label>Descripción</label>
+    <textarea id="descripcion" rows="2" placeholder="Detalles adicionales..."></textarea>
+
+    <div class="form-row">
+      <div>
+        <label>Latitud</label>
+        <input id="latitud" type="number" step="any" placeholder="-33.4569">
+      </div>
+      <div>
+        <label>Longitud</label>
+        <input id="longitud" type="number" step="any" placeholder="-70.6483">
+      </div>
+    </div>
+
+    <button id="btnReportar" onclick="crearReporte()">Enviar reporte</button>
+  </div>
+
+  <!-- NOTIFICACIONES -->
+  <div class="card">
+    <h2>Notificaciones</h2>
+    <div class="refresh-info" id="ultimaActualizacion">Actualizando...</div>
+    <ul class="lista" id="listaNotificaciones">
+      <li class="empty">Cargando notificaciones...</li>
+    </ul>
+  </div>
+
+  <!-- REPORTES ACTIVOS -->
+  <div class="card full-width">
+    <h2>Reportes activos</h2>
+    <ul class="lista" id="listaReportes">
+      <li class="empty">Cargando reportes...</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API_REPORTES       = 'http://localhost:8082';
+  const API_NOTIFICACIONES = 'http://localhost:8085';
+
+  function mostrarToast(mensaje, esError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = mensaje;
+    t.className = 'toast show' + (esError ? ' error' : '');
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  function formatFecha(fecha) {
+    if (!fecha) return '';
+    return new Date(fecha).toLocaleString('es-CL');
+  }
+
+  // ── Crear mascota y luego reporte ──────────────────────────
+  async function crearReporte() {
+    const btn = document.getElementById('btnReportar');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    const nombreMascota = document.getElementById('nombreMascota').value.trim();
+    if (!nombreMascota) {
+      mostrarToast('El nombre de la mascota es obligatorio', true);
+      btn.disabled = false;
+      btn.textContent = 'Enviar reporte';
+      return;
+    }
+
+    try {
+      // Paso 1: crear la mascota
+      const mascotaRes = await fetch(`${API_REPORTES}/api/mascotas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre:      nombreMascota,
+          especie:     document.getElementById('especie').value,
+          tamano:      document.getElementById('tamano').value,
+          color:       document.getElementById('color').value,
+          raza:        document.getElementById('raza').value,
+          descripcion: document.getElementById('descripcion').value
+        })
+      });
+
+      if (!mascotaRes.ok) throw new Error('Error al registrar la mascota');
+      const mascota = await mascotaRes.json();
+
+      // Paso 2: crear el reporte vinculado a la mascota
+      const reporteRes = await fetch(`${API_REPORTES}/api/reportes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo:        document.getElementById('tipo').value,
+          descripcion: document.getElementById('descripcion').value,
+          latitud:     parseFloat(document.getElementById('latitud').value) || null,
+          longitud:    parseFloat(document.getElementById('longitud').value) || null,
+          usuarioId:   1,
+          mascota:     { id: mascota.id }
+        })
+      });
+
+      if (!reporteRes.ok) throw new Error('Error al crear el reporte');
+
+      mostrarToast('Reporte enviado correctamente');
+      document.getElementById('nombreMascota').value = '';
+      document.getElementById('color').value = '';
+      document.getElementById('raza').value = '';
+      document.getElementById('descripcion').value = '';
+      document.getElementById('latitud').value = '';
+      document.getElementById('longitud').value = '';
+
+      cargarReportes();
+      cargarNotificaciones();
+
+    } catch (e) {
+      mostrarToast(e.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Enviar reporte';
+    }
+  }
+
+  // ── Cargar reportes ────────────────────────────────────────
+  async function cargarReportes() {
+    try {
+      const res = await fetch(`${API_REPORTES}/api/reportes`);
+      const reportes = await res.json();
+      const lista = document.getElementById('listaReportes');
+
+      if (!reportes.length) {
+        lista.innerHTML = '<li class="empty">No hay reportes registrados</li>';
+        return;
+      }
+
+      lista.innerHTML = reportes.reverse().map(r => `
+        <li>
+          <div class="lista-meta">
+            <span class="badge badge-${r.tipo.toLowerCase()}">${r.tipo}</span>
+            <span class="badge badge-activo">${r.estado}</span>
+            <strong>${r.mascota?.nombre || 'Sin nombre'}</strong>
+            <span style="color:#a0aec0">${r.mascota?.especie || ''} · ${r.mascota?.color || ''}</span>
+          </div>
+          <div class="lista-desc">${r.descripcion || 'Sin descripción'} · ${formatFecha(r.fechaReporte)}</div>
+        </li>
+      `).join('');
+    } catch {
+      document.getElementById('listaReportes').innerHTML =
+        '<li class="empty">No se pudo conectar con ms-reportes (puerto 8082)</li>';
+    }
+  }
+
+  // ── Cargar notificaciones ──────────────────────────────────
+  async function cargarNotificaciones() {
+    try {
+      const res = await fetch(`${API_NOTIFICACIONES}/api/notificaciones`);
+      const notificaciones = await res.json();
+      const lista = document.getElementById('listaNotificaciones');
+
+      document.getElementById('ultimaActualizacion').textContent =
+        'Última actualización: ' + new Date().toLocaleTimeString('es-CL');
+
+      if (!notificaciones.length) {
+        lista.innerHTML = '<li class="empty">Sin notificaciones aún</li>';
+        return;
+      }
+
+      lista.innerHTML = notificaciones.reverse().map(n => `
+        <li>
+          <div class="lista-meta">
+            <span class="badge ${n.leida ? 'badge-leida' : 'badge-no-leida'}">
+              ${n.leida ? 'Leída' : 'Nueva'}
+            </span>
+            <span>${n.tipo || 'PUSH'}</span>
+          </div>
+          <div>${n.mensaje}</div>
+          <div class="lista-desc">${formatFecha(n.fechaEnvio)}</div>
+        </li>
+      `).join('');
+    } catch {
+      document.getElementById('listaNotificaciones').innerHTML =
+        '<li class="empty">No se pudo conectar con ms-notificaciones (puerto 8085)</li>';
+    }
+  }
+
+  // Carga inicial
+  cargarReportes();
+  cargarNotificaciones();
+
+  // Auto-refresh de notificaciones cada 5 segundos
+  setInterval(cargarNotificaciones, 5000);
+</script>
+
+</body>
+</html>
